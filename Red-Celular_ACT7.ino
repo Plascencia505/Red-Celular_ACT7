@@ -2,20 +2,20 @@
 #include <TinyGsmClient.h>
 #include <PubSubClient.h>
 
-// --- Definición de pines y hardware ---
+// Definicir de pines y hardware
 const int RXD2 = 16;
 const int TXD2 = 17;
 const int PIN_LED = 4;
 
-// --- Configuración de Usuario y Credenciales Telcel ---
+// Configurar de Usuario y Credenciales Telcel
 const String NUMERO_CELULAR = "+523122011685"; 
-const String MENSAJE_SMS = "Prueba autonoma ESP32 - Actividad VII";
+const String MENSAJE_SMS = "Prueba ESP32 - Actividad VII: nensaje";
 
 const char apn[] = "internet.itelcel.com";
 const char user[] = "webgprs";
 const char pass[] = "webgprs2002";
 
-// --- Configuración del Broker MQTT ---
+// Configurar el Broker MQTT
 const char broker[] = "broker.hivemq.com";
 const int puertoMQTT = 1883;
 const char topicLED[] = "Equipo2/led";
@@ -41,11 +41,11 @@ void setup() {
   delay(3000); 
   Serial.println("\n--- Iniciando Secuencia Autónoma GSM ---");
 
-  // 1. Configurar SMS en modo texto
+  // Configurar SMS en modo texto
   enviarComandoAT("AT+CMGF=1", 1000);
 
-  // 2. Enviar SMS
-  Serial.println("[INFO] Enviando SMS...");
+  // Enviar SMS
+  Serial.println("Enviando SMS...");
   sim800Serial.print("AT+CMGS=\"");
   sim800Serial.print(NUMERO_CELULAR);
   sim800Serial.println("\"");
@@ -59,46 +59,45 @@ void setup() {
     Serial.write(sim800Serial.read());
   }
 
-  // 3. Realizar Llamada
-  Serial.println("\n[INFO] Realizando llamada de voz...");
+  // Realizar Llamada
+  Serial.println("\nRealizando llamada de voz...");
   String comandoLlamada = "ATD" + NUMERO_CELULAR + ";";
   enviarComandoAT(comandoLlamada, 1000);
 
-  // 4. Corte programado
-  Serial.println("[INFO] Esperando 15 segundos antes de colgar...");
+  // Corte programado
+  Serial.println("Esperando 15 segundos antes de colgar...");
   delay(15000); 
   
-  Serial.println("[INFO] Colgando llamada...");
+  Serial.println("Colgando llamada...");
   enviarComandoAT("ATH", 1000);
 
-  // --- FASE MQTT / GPRS ---
+  // FASE MQTT / GPRS 
   Serial.println("\n--- Iniciando Conexión GPRS y Broker MQTT ---");
   
   modem.restart();
   
   // Esperar a que la red celular esté lista tras el reinicio para evitar errores GPRS
-  Serial.println("[GPRS] Esperando red celular...");
+  Serial.println("Esperando red celular...");
   if (!modem.waitForNetwork()) {
-    Serial.println("[ERROR] No se pudo registrar en la red");
+    Serial.println("No se pudo registrar en la red");
     return;
   }
-  Serial.println("[GPRS] ¡Red celular lista!");
+  Serial.println("¡Red celular lista!");
 
-  Serial.print("[GPRS] Conectando a APN: ");
+  Serial.print("Conectando a APN: ");
   Serial.println(apn);
   if (!modem.gprsConnect(apn, user, pass)) {
-    Serial.println("[ERROR] Fallo en la conexión GPRS");
+    Serial.println("Fallo en la conexión GPRS");
     return;
   }
-  Serial.println("[GPRS] ¡Conectado con éxito!");
+  Serial.println("¡Conectado con éxito!");
 
   IPAddress localIP = modem.localIP();
-  Serial.print("[GPRS] IP Local asignada por Telcel: ");
+  Serial.print("IP Local asignada por Telcel: ");
   Serial.println(localIP);
   
   Serial.println("[GPRS] Estabilizando canal de red (5 segundos)...");
-  delay(5000); 
-  // -------------------------------------------------------------
+  delay(5000);
 
   // Configurar cliente MQTT
   mqtt.setServer(broker, puertoMQTT);
@@ -113,14 +112,15 @@ void loop() {
   mqtt.loop();
 }
 
-// Función callback que procesa los mensajes entrantes del tópico
+// Función callback 
+// Procesa los mensajes entrantes del tópico
 void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   String mensaje = "";
   for (unsigned int i = 0; i < length; i++) {
     mensaje += (char)payload[i];
   }
   
-  Serial.print("[MQTT] Mensaje recibido en [");
+  Serial.print("Mensaje recibido en [");
   Serial.print(topic);
   Serial.print("]: ");
   Serial.println(mensaje);
@@ -128,24 +128,24 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   // Control físico del actuador según el payload recibido
   if (mensaje == "ON") {
     digitalWrite(PIN_LED, HIGH);
-    Serial.println("[ACTUADOR] LED ENCENDIDO");
+    Serial.println("LED ENCENDIDO");
   } else if (mensaje == "OFF") {
     digitalWrite(PIN_LED, LOW);
-    Serial.println("[ACTUADOR] LED APAGADO");
+    Serial.println("LED APAGADO");
   }
 }
 
 // Rutina de reconexión al broker público
 void conectarMQTT() {
   while (!mqtt.connected()) {
-    Serial.print("[MQTT] Intentando conexión al broker...");
+    Serial.print("Intentando conexión al broker...");
     String clientId = "ESP32-SIM800-Client-";
     clientId += String(random(0xffff), HEX);
     
     if (mqtt.connect(clientId.c_str())) {
       Serial.println(" ¡Conectado!");
       mqtt.subscribe(topicLED);
-      Serial.print("[MQTT] Suscrito al tópico: ");
+      Serial.print("Suscrito al tópico: ");
       Serial.println(topicLED);
     } else {
       Serial.print(" Fallo, rc=");
